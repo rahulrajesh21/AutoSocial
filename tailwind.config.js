@@ -10,6 +10,7 @@ export default {
         accent: '#657786',
         background: '#F5F8FA',
         text: '#14171A',
+        borderColor: '#27272A',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
