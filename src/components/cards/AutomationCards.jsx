@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export const AutomationCards = () => {
+export const AutomationCards = ({workflow}) => {
   const [isEnabled, setIsEnabled] = useState(false);
   const CustomToggle = ({ checked, onChange }) => (
     <button
@@ -61,10 +61,10 @@ export const AutomationCards = () => {
           </div>
 
           <h2 className="text-xl font-semibold text-white mb-1 transition-colors duration-300">
-            Workflow 1
+            {workflow.name || 'Workflow Name'}
           </h2>
           <p className="text-gray-400 text-sm transition-colors duration-300">
-            Creating a test Workflow
+            {workflow.description || 'This is a sample description for the workflow.'}
           </p>
         </div>
         <div className="flex items-center ml-6">
