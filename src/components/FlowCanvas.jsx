@@ -124,7 +124,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
       }
     };
 
-    // Add specific data based on node type
     if (nodeType === 'gemini') {
       nodeData.prompt = prompt || '';
     } else if (nodeType === 'instgram') {
@@ -135,9 +134,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
       id,
       type: nodeType,
       position,
-      data: nodeData,
+      data: {id ,...nodeData}
     };
-
     setNodes((nds) => nds.concat(newNode));
   }, [setNodes]);
 
@@ -153,7 +151,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
     }
   }, [onNodeSelect]);
 
-  // Handle node updates from the sidebar
   React.useEffect(() => {
     if (onNodeUpdate) {
       onNodeUpdate((updatedNode) => {
@@ -315,7 +312,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
       try {
         const flowData = JSON.parse(e.target.result);
         if (flowData.nodes && flowData.edges) {
-          // Add onRun function to node data
           const nodesWithCallbacks = flowData.nodes.map(node => ({
             ...node,
             data: {
@@ -329,7 +325,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
           setNodes(nodesWithCallbacks);
           setEdges(flowData.edges);
           
-          // Save as last flow
           localStorage.setItem('reactflow-last-flow', JSON.stringify(flowData));
           
           alert('Flow imported successfully!');
