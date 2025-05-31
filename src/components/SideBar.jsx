@@ -15,7 +15,7 @@ export const SideBar = () => {
   ];
 
   return (
-    <div className="w-64 flex flex-col text-white p-4 h-full">
+    <div className="w-64 flex flex-col text-white p-4 h-full overflow-y-auto">
       <ul className="space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -37,7 +37,7 @@ export const SideBar = () => {
         })}
       </ul>
 
-      <div className="mt-auto space-y-4 pt-4">
+      <div className="mt-auto space-y-4 pt-4 ">
         <div className="bg-secondary p-4 rounded-lg text-center shadow-lg">
           <p className="text-white text-lg font-semibold">
             Upgrade to{' '}

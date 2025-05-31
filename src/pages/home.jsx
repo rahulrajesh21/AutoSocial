@@ -4,13 +4,14 @@ import { AutomationCards } from '../components/cards/AutomationCards';
 import CreateAutomation from '../components/popCards/CreateAutomation';
 import { createWorkflow,getAllWorkflows } from '../utils/api';
 import { useAuth } from '@clerk/clerk-react';
-
+import { toast } from 'react-toastify';
+import { Link } from 'react-router-dom';
 const Home = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [workflows, setWorkflows] = useState([]);
-   const { getToken } = useAuth();
+  const { getToken } = useAuth();
  useEffect(() => {
     const fetchWorkflows = async () => {
       try {
@@ -25,11 +26,14 @@ const Home = () => {
 
     fetchWorkflows();
   }, [getToken]);
-  const handleWorkflowSubmit = async (e) => {
+  const handleWorkflowSubmit = async (e) => { 
     e.preventDefault();
     try {
-      const data = await createWorkflow(name, description);
-      console.log('Created:', data);
+      const token = await getToken();  
+      const data = await createWorkflow(name, description,token);
+      toast.success('🎉 Workflow created successfully!');
+      console.log('Workflow created:',data.data); 
+      setWorkflows((prev) => [...prev, data.data]);
       setShowPopup(false);
       setName('');
       setDescription('');
@@ -52,7 +56,9 @@ const Home = () => {
 
       <div className="flex flex-col mt-6 p-4 space-y-2">
       {workflows.map((workflow) => (
+        <Link key={workflow.id} to={`/AutomationsDesigner/${workflow.id}`} className="no-underline">
         <AutomationCards key={workflow.id} workflow={workflow} />
+        </Link>
       ))}
       </div>
 

@@ -1,26 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { useAuth } from '@clerk/clerk-react';
-import { createWorkflow } from '../../utils/api';
-import { toast } from 'react-toastify';
-const CreateAutomation = ({ name, setName, description, setDescription, onClose }) => {
-  const { getToken } = useAuth();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = await getToken();
-      await createWorkflow(name, description, token); // pass token explicitly
-      toast.success('🎉 Workflow created successfully!');
-      setName('');
-      setDescription('');
-      onClose();
-    } catch (error) {
-      console.error('Error creating workflow:', error.message);
-      toast.error('Failed to create workflow');
-    }
-  };
-
+const CreateAutomation = ({ name, setName, description, setDescription, onClose, onSubmit }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-xl shadow-lg w-[90%] max-w-md">
@@ -30,7 +11,7 @@ const CreateAutomation = ({ name, setName, description, setDescription, onClose 
             <X color="black" />
           </button>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
           <input
             type="text"
             placeholder="Automation Name"
