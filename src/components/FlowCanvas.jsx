@@ -228,7 +228,18 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
           ...(node.type === 'gemini' ? { prompt: node.data.prompt || '' } : {}),
           ...(node.type === 'instgram' ? { 
             label: node.data.label || 'Instagram',
-            selectedOption: node.data.selectedOption
+            selectedOption: node.data.selectedOption,
+            // Include selected post data if available
+            ...(node.data.selectedPost ? {
+              selectedPost: {
+                id: node.data.selectedPost.id,
+                caption: node.data.selectedPost.caption,
+                media_type: node.data.selectedPost.media_type,
+                mediaId: node.data.selectedPost.id, // Store media ID for API calls
+                username: node.data.selectedPost.username || 'instagram_user', // Include username
+                permalink: node.data.selectedPost.permalink
+              }
+            } : {})
           } : {})
         }
       })),

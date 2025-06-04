@@ -1,10 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
+import { updateAutomationStatus } from '../../utils/api';
+import { toast } from 'react-toastify';
+import { Link } from 'react-router-dom';
 
 export const AutomationCards = ({workflow}) => {
   const [isEnabled, setIsEnabled] = useState(false);
+  const { getToken } = useAuth();
+  
+  // Initialize status from workflow data
+  useEffect(() => {
+    if (workflow && workflow.status !== undefined) {
+      setIsEnabled(workflow.status);
+    }
+  }, [workflow]);
+
+  const handleToggleStatus = async (newStatus, event) => {
+    // Stop event propagation to prevent the Link navigation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    try {
+      const token = await getToken();
+      await updateAutomationStatus(token, workflow.id, newStatus);
+      setIsEnabled(newStatus);
+      toast.success(`Automation ${newStatus ? 'activated' : 'deactivated'}`);
+    } catch (error) {
+      console.error('Error updating automation status:', error);
+      toast.error('Failed to update automation status');
+      // Revert UI state on failure
+      setIsEnabled(!newStatus);
+    }
+  };
+
   const CustomToggle = ({ checked, onChange }) => (
     <button
-      onClick={() => onChange(!checked)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onChange(!checked, e);
+      }}
       className={`
         relative inline-flex h-7 w-12 items-center rounded-full 
         transition-all duration-300 ease-in-out transform hover:scale-105
@@ -38,7 +75,6 @@ export const AutomationCards = ({workflow}) => {
       <div
         className="
           w-full flex flex-row items-center justify-between min-h-32 
-          
           border border-borderColor rounded-2xl p-6 
           transition-all duration-300 ease-out
           hover:border-gray-600 hover:shadow-xl hover:shadow-black/20
@@ -46,30 +82,36 @@ export const AutomationCards = ({workflow}) => {
           transform hover:-translate-y-1
         "
       >
-        <div className="flex-1">
-          <div className="flex flex-row items-center gap-3 mb-3">
-            <img
-              src="icons/facebook_icon.png"
-              alt="Facebook Icon"
-              className="w-6 h-6"
-            />
-            <img
-              src="icons/instagram_icon.png"
-              alt="Twitter Icon"
-              className="w-6 h-6"
-            />
-          </div>
+        <Link 
+          to={`/AutomationsDesigner/${workflow.id}`} 
+          className="flex-1 no-underline"
+        >
+          <div className="flex-1">
+            <div className="flex flex-row items-center gap-3 mb-3">
+              <img
+                src="icons/facebook_icon.png"
+                alt="Facebook Icon"
+                className="w-6 h-6"
+              />
+              <img
+                src="icons/instagram_icon.png"
+                alt="Twitter Icon"
+                className="w-6 h-6"
+              />
+            </div>
 
-          <h2 className="text-xl font-semibold text-white mb-1 transition-colors duration-300">
-            {workflow.name || 'Workflow Name'}
-          </h2>
-          <p className="text-gray-400 text-sm transition-colors duration-300">
-            {workflow.description || 'This is a sample description for the workflow.'}
-          </p>
-        </div>
-        <div className="flex items-center ml-6">
+            <h2 className="text-xl font-semibold text-white mb-1 transition-colors duration-300">
+              {workflow.name || 'Workflow Name'}
+            </h2>
+            <p className="text-gray-400 text-sm transition-colors duration-300">
+              {workflow.description || 'This is a sample description for the workflow.'}
+            </p>
+          </div>
+        </Link>
+        
+        <div className="flex items-center ml-6" onClick={e => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-2">
-            <CustomToggle checked={isEnabled} onChange={setIsEnabled} />
+            <CustomToggle checked={isEnabled} onChange={handleToggleStatus} />
             <span
               className={`
               text-xs font-medium transition-all duration-300

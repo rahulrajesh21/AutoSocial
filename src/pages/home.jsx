@@ -56,9 +56,7 @@ const Home = () => {
 
       <div className="flex flex-col mt-6 p-4 space-y-2">
       {workflows.map((workflow) => (
-        <Link key={workflow.id} to={`/AutomationsDesigner/${workflow.id}`} className="no-underline">
         <AutomationCards key={workflow.id} workflow={workflow} />
-        </Link>
       ))}
       </div>
 

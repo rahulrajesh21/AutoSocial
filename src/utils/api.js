@@ -20,6 +20,7 @@ export async function createWorkflow(name, description, token) {
 
 
 export async function updateTemplate(token,id,flowData){
+  console.log(flowData)
   const res = await fetch(
     `http://localhost:3000/api/CreateAutomation`,
     {
@@ -59,5 +60,23 @@ export async function getInstagramPosts(token) {
   });
 
   if (!res.ok) throw new Error('Failed to fetch Instagram posts');
+  return res.json();
+}
+
+export async function updateAutomationStatus(token, id, status) {
+  const res = await fetch(`http://localhost:3000/api/UpdateAutomationStatus`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id, status }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Failed to update automation status');
+  }
+
   return res.json();
 }

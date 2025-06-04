@@ -51,6 +51,15 @@ const instagramOptions = [
     bgColor: 'bg-gradient-to-br from-purple-800 to-purple-900'
   },
   {
+    id: 'reply-comment',
+    title: 'Reply Comment',
+    description: 'Reply to comments on Instagram posts',
+    icon: MessageCircle,
+    color: 'text-cyan-500',
+    bgColor: 'bg-gradient-to-br from-cyan-800 to-cyan-900',
+    requiresPostSelection: false
+  },
+  {
     id: 'post-content',
     title: 'Post Content',
     description: 'Create and publish posts, stories, reels to Instagram Business accounts',
@@ -173,6 +182,9 @@ const PostSelectionModal = ({ isOpen, onClose, onSelect, currentSelection, posts
                           </a>
                         )}
                       </div>
+                      {post.username && (
+                        <p className="text-xs text-blue-300 mb-1">@{post.username}</p>
+                      )}
                       <p className="text-white text-sm mb-1 break-words">{truncatedCaption}</p>
                       <p className="text-xs text-gray-500">ID: {post.id}</p>
                     </div>
@@ -287,12 +299,18 @@ const BaseInstagramNode = ({ data, option }) => {
             <div className="w-2 h-2 bg-green-400 rounded-full"></div>
             <span className="text-xs text-green-300 font-medium">Post Selected</span>
           </div>
+          {selectedPost.username && (
+            <p className="text-xs text-blue-200 mb-1">
+              @{selectedPost.username}
+            </p>
+          )}
           <p className="text-xs text-gray-200 truncate">
             {selectedPost.caption ? 
               (selectedPost.caption.length > 40 ? selectedPost.caption.substring(0, 40) + '...' : selectedPost.caption) :
               `${selectedPost.media_type} Post`
             }
           </p>
+          <p className="text-xs text-gray-400 mt-1 font-mono">ID: {selectedPost.id}</p>
         </div>
       )}
       
