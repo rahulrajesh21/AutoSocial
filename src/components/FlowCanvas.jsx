@@ -10,8 +10,11 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import InstgramNode from '../custom_nodes/InstgramNode'; 
+import InstagramNode from '../custom_nodes/InstgramNode'; 
 import GeminiNode from '../custom_nodes/geminiNode';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
+import { updateTemplate } from '../utils/api';
 
 // Simple Modal Component
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -24,7 +27,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
           <h3 className="text-lg font-medium text-white">{title}</h3>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white text-xl"
           >
             &times;
           </button>
@@ -47,46 +50,83 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const [flowName, setFlowName] = useState('');
   const [savedFlows, setSavedFlows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  const { id } = useParams();
+  const { getToken } = useAuth();
 
   // Load saved flows list on component mount
   useEffect(() => {
-    const flowsList = localStorage.getItem('reactflow-saved-flows');
-    if (flowsList) {
+    const loadSavedFlows = () => {
       try {
-        const flows = JSON.parse(flowsList);
-        setSavedFlows(flows);
+        const flowsList = localStorage.getItem(`reactflow-saved-flows-${id}`);
+        if (flowsList) {
+          const flows = JSON.parse(flowsList);
+          // Ensure flows is always an array
+          setSavedFlows(Array.isArray(flows) ? flows : []);
+        } else {
+          setSavedFlows([]);
+        }
       } catch (error) {
         console.error('Failed to load saved flows list:', error);
+        setSavedFlows([]);
       }
-    }
-  }, []);
+    };
 
-  // Load last used flow on component mount
-  useEffect(() => {
-    const lastFlow = localStorage.getItem('reactflow-last-flow');
-    if (lastFlow) {
-      try {
-        const flow = JSON.parse(lastFlow);
-        if (flow.nodes && flow.edges) {
-          // Add onRun function to node data
-          const nodesWithCallbacks = flow.nodes.map(node => ({
+    loadSavedFlows();
+  }, [id]);
+
+  // Node update handler
+  const handleNodeUpdate = useCallback((updatedNodeData) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === updatedNodeData.id) {
+          return {
             ...node,
             data: {
               ...node.data,
-              onRun: () => {
-                console.log(`Running node ${node.id}`);
+              ...updatedNodeData.data,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
+  // Load last used flow on component mount
+  useEffect(() => {
+    const loadLastFlow = () => {
+      try {
+        const lastFlow = localStorage.getItem(`reactflow-last-flow-${id}`);
+        if (lastFlow) {
+          const flow = JSON.parse(lastFlow);
+          if (flow.nodes && flow.edges) {
+            // Add onRun and onUpdate functions to node data
+            const nodesWithCallbacks = flow.nodes.map(node => ({
+              ...node,
+              data: {
+                ...node.data,
+                onRun: () => {
+                  console.log(`Running node ${node.id}`);
+                },
+                onUpdate: handleNodeUpdate
               }
-            }
-          }));
-          
-          setNodes(nodesWithCallbacks);
-          setEdges(flow.edges);
+            }));
+            
+            setNodes(nodesWithCallbacks);
+            setEdges(flow.edges);
+          }
         }
       } catch (error) {
         console.error('Failed to load last flow:', error);
       }
+    };
+
+    if (handleNodeUpdate) {
+      loadLastFlow();
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, handleNodeUpdate, id]);
 
   const onConnect = useCallback((connection) => {
     const edge = { ...connection, animated: true, id: `edge-${+new Date()}` };
@@ -94,7 +134,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
   }, [setEdges]);
 
   const nodeTypes = {
-    instgram: InstgramNode,
+    instgram: InstagramNode,
     gemini: GeminiNode
   };
 
@@ -116,28 +156,31 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
     if (!nodeType) return;
 
     const position = { x: event.clientX - 300, y: event.clientY - 50 }; 
-    const id = `${+new Date()}`;
+    const nodeId = `${+new Date()}`;
     
     let nodeData = {
+      id: nodeId,
       onRun: () => {
-        console.log(`Running node ${id}`);
-      }
+        console.log(`Running node ${nodeId}`);
+      },
+      onUpdate: handleNodeUpdate
     };
 
     if (nodeType === 'gemini') {
       nodeData.prompt = prompt || '';
     } else if (nodeType === 'instgram') {
       nodeData.label = label || 'Instagram';
+      nodeData.selectedOption = null; // No option selected initially
     }
 
     const newNode = {
-      id,
+      id: nodeId,
       type: nodeType,
       position,
-      data: {id ,...nodeData}
+      data: nodeData
     };
     setNodes((nds) => nds.concat(newNode));
-  }, [setNodes]);
+  }, [setNodes, handleNodeUpdate]);
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -145,6 +188,9 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
   }, []);
 
   const onNodeClick = useCallback((event, node) => {
+    // Prevent the click from propagating if it's from the Instagram options modal
+    if (event.defaultPrevented) return;
+    
     setSelectedNodeId(node.id);
     if (onNodeSelect) {
       onNodeSelect(node);
@@ -153,24 +199,9 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
 
   React.useEffect(() => {
     if (onNodeUpdate) {
-      onNodeUpdate((updatedNode) => {
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === updatedNode.id) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  ...updatedNode.data,
-                },
-              };
-            }
-            return node;
-          })
-        );
-      });
+      onNodeUpdate(handleNodeUpdate);
     }
-  }, [onNodeUpdate, setNodes]);
+  }, [onNodeUpdate, handleNodeUpdate]);
 
   // Handle background click to deselect node
   const onPaneClick = useCallback(() => {
@@ -193,45 +224,84 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
         type: node.type,
         position: node.position,
         data: {
+          id: node.data.id || node.id, 
           ...(node.type === 'gemini' ? { prompt: node.data.prompt || '' } : {}),
-          ...(node.type === 'instgram' ? { label: node.data.label || 'Instagram' } : {})
+          ...(node.type === 'instgram' ? { 
+            label: node.data.label || 'Instagram',
+            selectedOption: node.data.selectedOption
+          } : {})
         }
       })),
       edges: flow.edges
     };
   }, [rfInstance]);
 
-  const onQuickSave = useCallback(() => {
-    const flowData = getFlowData();
-    if (flowData) {
-      localStorage.setItem('reactflow-last-flow', JSON.stringify(flowData));
-      alert('Flow saved successfully!');
+  // Save flow to both local storage and server
+  const saveFlowData = async (flowData, flowName = null) => {
+    try {
+      setLoading(true);
+      
+      // Save to localStorage
+      const storageKey = flowName ? `reactflow-flow-${id}-${flowName}` : `reactflow-last-flow-${id}`;
+      localStorage.setItem(storageKey, JSON.stringify(flowData));
+      
+      // Get token and save to server
+      const token = await getToken();
+      await updateTemplate(token, id,flowData);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to save flow:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
-  }, [getFlowData]);
+  };
+
+  const onQuickSave = useCallback(async () => {
+    const flowData = getFlowData();
+    if (!flowData) {
+      alert('No flow data to save');
+      return;
+    }
+
+    try {
+      await saveFlowData(flowData);
+      alert('Flow saved successfully!');
+    } catch (error) {
+      alert('Failed to save flow. Please try again.');
+    }
+  }, [getFlowData, id, getToken]);
 
   const openSaveModal = () => {
     setFlowName('');
     setIsSaveModalOpen(true);
   };
 
-  const saveNamedFlow = () => {
+  const saveNamedFlow = async () => {
     if (!flowName.trim()) {
       alert('Please enter a name for your flow');
       return;
     }
 
     const flowData = getFlowData();
-    if (flowData) {
-      // Save the flow data
-      localStorage.setItem(`reactflow-flow-${flowName}`, JSON.stringify(flowData));
+    if (!flowData) {
+      alert('No flow data to save');
+      return;
+    }
+
+    try {
+      await saveFlowData(flowData, flowName);
       
+      // Update saved flows list
       const updatedFlows = [...savedFlows.filter(f => f !== flowName), flowName];
       setSavedFlows(updatedFlows);
-      localStorage.setItem('reactflow-saved-flows', JSON.stringify(updatedFlows));
-      localStorage.setItem('reactflow-last-flow', JSON.stringify(flowData));
+      localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
       
       setIsSaveModalOpen(false);
       alert(`Flow "${flowName}" saved successfully!`);
+    } catch (error) {
+      alert(`Failed to save flow "${flowName}". Please try again.`);
     }
   };
 
@@ -239,20 +309,23 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
     setIsLoadModalOpen(true);
   };
 
-  const loadFlow = (name) => {
-    const flowData = localStorage.getItem(`reactflow-flow-${name}`);
-    if (flowData) {
-      try {
+  const loadFlow = async (name) => {
+    try {
+      setLoading(true);
+      const flowData = localStorage.getItem(`reactflow-flow-${id}-${name}`);
+      
+      if (flowData) {
         const flow = JSON.parse(flowData);
         if (flow.nodes && flow.edges) {
-          // Add onRun function to node data
+          // Add onRun and onUpdate functions to node data
           const nodesWithCallbacks = flow.nodes.map(node => ({
             ...node,
             data: {
               ...node.data,
               onRun: () => {
                 console.log(`Running node ${node.id}`);
-              }
+              },
+              onUpdate: handleNodeUpdate
             }
           }));
           
@@ -260,25 +333,36 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
           setEdges(flow.edges);
           
           // Also save as last flow
-          localStorage.setItem('reactflow-last-flow', flowData);
+          localStorage.setItem(`reactflow-last-flow-${id}`, flowData);
           
           setIsLoadModalOpen(false);
           alert(`Flow "${name}" loaded successfully!`);
+        } else {
+          throw new Error('Invalid flow data format');
         }
-      } catch (error) {
-        console.error(`Failed to load flow "${name}":`, error);
-        alert(`Failed to load flow "${name}"`);
+      } else {
+        throw new Error('Flow not found');
       }
+    } catch (error) {
+      console.error(`Failed to load flow "${name}":`, error);
+      alert(`Failed to load flow "${name}"`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const deleteFlow = (name, event) => {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete flow "${name}"?`)) {
-      localStorage.removeItem(`reactflow-flow-${name}`);
+    if (window.confirm(`Are you sure you want to delete flow "${name}"?`)) {
+      // Remove from localStorage
+      localStorage.removeItem(`reactflow-flow-${id}-${name}`);
+      
+      // Update saved flows list
       const updatedFlows = savedFlows.filter(f => f !== name);
       setSavedFlows(updatedFlows);
-      localStorage.setItem('reactflow-saved-flows', JSON.stringify(updatedFlows));
+      localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
+      
+      alert(`Flow "${name}" deleted successfully!`);
     }
   };
 
@@ -291,13 +375,13 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'flow-diagram.json';
+      link.download = `flow-diagram-${id}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }
-  }, [getFlowData]);
+  }, [getFlowData, id]);
 
   const onImportClick = () => {
     fileInputRef.current?.click();
@@ -308,7 +392,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const flowData = JSON.parse(e.target.result);
         if (flowData.nodes && flowData.edges) {
@@ -318,14 +402,16 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
               ...node.data,
               onRun: () => {
                 console.log(`Running node ${node.id}`);
-              }
+              },
+              onUpdate: handleNodeUpdate
             }
           }));
           
           setNodes(nodesWithCallbacks);
           setEdges(flowData.edges);
           
-          localStorage.setItem('reactflow-last-flow', JSON.stringify(flowData));
+          // Save the imported flow
+          await saveFlowData(flowData);
           
           alert('Flow imported successfully!');
         } else {
@@ -361,19 +447,22 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
         <Panel position="top-right" className="flex gap-2">
           <button 
             onClick={onQuickSave} 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md"
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md disabled:opacity-50"
           >
-            Quick Save
+            {loading ? 'Saving...' : 'Quick Save'}
           </button>
           <button 
             onClick={openSaveModal} 
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-md"
+            disabled={loading}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-md disabled:opacity-50"
           >
             Save As
           </button>
           <button 
             onClick={openLoadModal} 
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 shadow-md"
+            disabled={loading}
+            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 shadow-md disabled:opacity-50"
           >
             Load
           </button>
@@ -413,16 +502,24 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
             type="text"
             value={flowName}
             onChange={(e) => setFlowName(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
             placeholder="Enter a name for your flow"
+            onKeyPress={(e) => e.key === 'Enter' && saveNamedFlow()}
           />
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setIsSaveModalOpen(false)}
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
           <button
             onClick={saveNamedFlow}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={loading || !flowName.trim()}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
-            Save
+            {loading ? 'Saving...' : 'Save'}
           </button>
         </div>
       </Modal>
@@ -433,20 +530,22 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
         onClose={() => setIsLoadModalOpen(false)} 
         title="Load Flow"
       >
-        {savedFlows.length === 0 ? (
-          <div className="text-gray-400">No saved flows found</div>
+        {loading ? (
+          <div className="text-center text-gray-400">Loading...</div>
+        ) : savedFlows.length === 0 ? (
+          <div className="text-gray-400 text-center py-4">No saved flows found</div>
         ) : (
           <div className="max-h-60 overflow-y-auto">
             {savedFlows.map((name) => (
               <div 
                 key={name}
                 onClick={() => loadFlow(name)}
-                className="flex justify-between items-center p-2 hover:bg-gray-700 rounded cursor-pointer mb-1"
+                className="flex justify-between items-center p-3 hover:bg-gray-700 rounded cursor-pointer mb-2 transition-colors"
               >
                 <span className="text-white">{name}</span>
                 <button
                   onClick={(e) => deleteFlow(name, e)}
-                  className="text-red-400 hover:text-red-300"
+                  className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
                 >
                   Delete
                 </button>

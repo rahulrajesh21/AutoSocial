@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Instagram, Settings, Edit3, Hash } from 'lucide-react';
+import { Brain, Instagram, Settings, Edit3, Hash, MessageCircle } from 'lucide-react';
 
 const DragSidebar = ({ selectedNode, onUpdateNode }) => {
   const [selectedType, setSelectedType] = useState(null);
@@ -77,6 +77,13 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
         return 'border-gray-500/30 bg-gray-500/10';
     }
   };
+
+  // Check if the selected Instagram node is using the comments option
+  const isCommentsOption = selectedNode?.type === 'instgram' && 
+                          selectedNode?.data?.selectedOption === 'get-comments';
+
+  // Check if a post is selected for comments
+  const hasSelectedPost = isCommentsOption && selectedNode?.data?.selectedPost;
 
   return (
     <aside className="w-64 bg-primary border-l-2 border-borderColor text-white p-4 space-y-4">
@@ -176,9 +183,43 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               <Instagram size={16} className="text-pink-400" />
               <p className="text-sm font-medium text-pink-300">Instagram Node</p>
             </div>
-            <p className="text-xs text-gray-400">
-              This node handles Instagram messaging and media operations. No additional configuration required.
-            </p>
+            
+            {isCommentsOption && (
+              <div className="mt-3 border-t border-pink-500/20 pt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageCircle size={16} className="text-yellow-400" />
+                  <p className="text-sm font-medium text-yellow-300">Comments Feature</p>
+                </div>
+                
+                {hasSelectedPost ? (
+                  <div className="bg-green-900/20 border border-green-500/30 rounded p-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <p className="text-xs text-green-300 font-medium">Post Selected</p>
+                    </div>
+                    <p className="text-xs text-gray-300 mt-1 truncate">
+                      {selectedNode.data.selectedPost.caption ? 
+                        (selectedNode.data.selectedPost.caption.length > 30 ? 
+                          selectedNode.data.selectedPost.caption.substring(0, 30) + '...' : 
+                          selectedNode.data.selectedPost.caption) : 
+                        'No caption'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded p-2 mt-2">
+                    <p className="text-xs text-yellow-300">
+                      This action requires a post selection. Click on the node to select a post.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!isCommentsOption && (
+              <p className="text-xs text-gray-400">
+                This node handles Instagram messaging and media operations. No additional configuration required.
+              </p>
+            )}
           </div>
         </div>
       )}
