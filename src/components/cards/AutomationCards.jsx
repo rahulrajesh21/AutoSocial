@@ -84,6 +84,7 @@ export const AutomationCards = ({workflow}) => {
       >
         <Link 
           to={`/AutomationsDesigner/${workflow.id}`} 
+          state={{ workflowData: workflow }}
           className="flex-1 no-underline"
         >
           <div className="flex-1">

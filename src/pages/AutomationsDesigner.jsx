@@ -1,10 +1,13 @@
 import React, { useState, useCallback, useRef } from 'react';
 import DragSidebar from '../components/SideBar/DragSidebar';
-import WrappedCanvas from '../components/FlowCanvas'; 
+import WrappedCanvas from '../components/FlowCanvas';
+import { useLocation } from 'react-router-dom';
 
 const AutomationsDesigner = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const updateNodeFn = useRef(null);
+  const location = useLocation();
+  const workflowData = location.state?.workflowData;
 
   const handleNodeSelect = useCallback((node) => {
     setSelectedNode(node);
@@ -24,7 +27,8 @@ const AutomationsDesigner = () => {
     <div className="flex h-screen">
       <WrappedCanvas 
         onNodeSelect={handleNodeSelect} 
-        onNodeUpdate={registerUpdateNodeFn} 
+        onNodeUpdate={registerUpdateNodeFn}
+        workflowData={workflowData}
       />
       <DragSidebar 
         selectedNode={selectedNode} 

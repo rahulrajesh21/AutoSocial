@@ -14,7 +14,8 @@ import InstagramNode from '../custom_nodes/InstgramNode';
 import GeminiNode from '../custom_nodes/geminiNode';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
-import { updateTemplate } from '../utils/api';
+import { updateTemplate, getWorkflowById } from '../utils/api';
+import { toast } from 'react-toastify';
 
 // Simple Modal Component
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -38,7 +39,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
+const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -94,10 +95,80 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
     );
   }, [setNodes]);
 
-  // Load last used flow on component mount
+  // Load flow data on component mount
   useEffect(() => {
-    const loadLastFlow = () => {
+    const loadFlowData = async () => {
       try {
+        setLoading(true);
+        
+        // First check if we have workflowData passed from the parent component
+        if (workflowData && workflowData.automation_template) {
+          console.log('Loading flow from passed data:', workflowData.automation_template);
+          const flow = workflowData.automation_template;
+          
+          if (flow.nodes && flow.edges) {
+            // Add onRun and onUpdate functions to node data
+            const nodesWithCallbacks = flow.nodes.map(node => ({
+              ...node,
+              data: {
+                ...node.data,
+                onRun: () => {
+                  console.log(`Running node ${node.id}`);
+                },
+                onUpdate: handleNodeUpdate
+              }
+            }));
+            
+            setNodes(nodesWithCallbacks);
+            setEdges(flow.edges);
+            
+            // Also save as last flow in localStorage for backup
+            localStorage.setItem(`reactflow-last-flow-${id}`, JSON.stringify(flow));
+            
+            toast.success('Flow loaded successfully');
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // If no workflowData or invalid data, try to get data from the server
+        if (!workflowData || !workflowData.automation_template) {
+          console.log('No passed data, fetching from server');
+          const token = await getToken();
+          const serverWorkflowData = await getWorkflowById(token, id);
+          
+          if (serverWorkflowData && serverWorkflowData.automation_template) {
+            console.log('Loading flow from server:', serverWorkflowData.automation_template);
+            const flow = serverWorkflowData.automation_template;
+            
+            if (flow.nodes && flow.edges) {
+              // Add onRun and onUpdate functions to node data
+              const nodesWithCallbacks = flow.nodes.map(node => ({
+                ...node,
+                data: {
+                  ...node.data,
+                  onRun: () => {
+                    console.log(`Running node ${node.id}`);
+                  },
+                  onUpdate: handleNodeUpdate
+                }
+              }));
+              
+              setNodes(nodesWithCallbacks);
+              setEdges(flow.edges);
+              
+              // Also save as last flow in localStorage for backup
+              localStorage.setItem(`reactflow-last-flow-${id}`, JSON.stringify(flow));
+              
+              toast.success('Flow loaded from server');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+        
+        // Fallback to localStorage if server data is not available
+        console.log('Server data not available, trying localStorage');
         const lastFlow = localStorage.getItem(`reactflow-last-flow-${id}`);
         if (lastFlow) {
           const flow = JSON.parse(lastFlow);
@@ -116,17 +187,21 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
             
             setNodes(nodesWithCallbacks);
             setEdges(flow.edges);
+            toast.info('Flow loaded from local storage');
           }
         }
       } catch (error) {
-        console.error('Failed to load last flow:', error);
+        console.error('Failed to load flow data:', error);
+        toast.error('Failed to load flow data');
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (handleNodeUpdate) {
-      loadLastFlow();
+    if (handleNodeUpdate && id) {
+      loadFlowData();
     }
-  }, [setNodes, setEdges, handleNodeUpdate, id]);
+  }, [setNodes, setEdges, handleNodeUpdate, id, getToken, workflowData]);
 
   const onConnect = useCallback((connection) => {
     const edge = { ...connection, animated: true, id: `edge-${+new Date()}` };
@@ -569,12 +644,13 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate }) => {
   );
 };
 
-const WrappedCanvas = ({ onNodeSelect, onNodeUpdate }) => {
+const WrappedCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   return (
     <ReactFlowProvider>
       <FlowCanvas 
         onNodeSelect={onNodeSelect}
         onNodeUpdate={onNodeUpdate}
+        workflowData={workflowData}
       />
     </ReactFlowProvider>
   );

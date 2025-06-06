@@ -50,6 +50,21 @@ export async function getAllWorkflows(token) {
   return body.data;
 }
 
+export async function getWorkflowById(token, id) {
+  const res = await fetch(`http://localhost:3000/api/GetWorkflowById/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error('Failed to fetch workflow');
+  const body = await res.json();
+  
+  return body.data;
+}
+
 export async function getInstagramPosts(token) {
   const res = await fetch(`http://localhost:3000/api/Getints`, {
     method: 'GET',
