@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Instagram, Settings, Edit3, Hash, MessageCircle } from 'lucide-react';
+import { Brain, Instagram, Settings, Edit3, Hash, MessageCircle, LampDesk, LifeBuoy } from 'lucide-react';
 
 const DragSidebar = ({ selectedNode, onUpdateNode }) => {
   const [selectedType, setSelectedType] = useState(null);
@@ -25,6 +25,10 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
       nodeData.prompt = prompt;
     } else if (nodeType === 'instgram') {
       nodeData.label = 'Instagram'; // Fixed label
+    } else if (nodeType === 'helpDesk'){
+      nodeData.label = 'Help Desk';
+      nodeData.category = 'technical';
+      nodeData.createTicket = true;
     }
     event.dataTransfer.setData(
       'application/reactflow',
@@ -62,6 +66,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
         return <Brain size={20} className='text-indigo-400' />;
       case 'instgram':
         return <Instagram size={20} className='text-pink-400' />;
+      case 'helpDesk':
+        return <LifeBuoy size={20} className='text-emerald-400' />;
       default:
         return <Settings size={20} className='text-gray-400' />;
     }
@@ -73,6 +79,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
         return 'border-indigo-500/30 bg-indigo-500/10';
       case 'instgram':
         return 'border-pink-500/30 bg-pink-500/10';
+      case 'helpDesk':
+        return 'border-emerald-500/30 bg-emerald-500/10';
       default:
         return 'border-gray-500/30 bg-gray-500/10';
     }
@@ -127,6 +135,23 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               </div>
             </div>
           </div>
+
+          <div
+            className="flex p-3 bg-secondary border-2 border-borderColor rounded-lg cursor-move hover:border-emerald-500/50 transition-colors duration-200 group"
+            onClick={() => handleClick('helpDesk')}
+            onDragStart={(e) => onDragStart(e, 'helpDesk')}
+            draggable
+          >
+            <div className='flex items-center mr-2 gap-3 w-full'>
+              <div className="p-2 bg-emerald-500/20 rounded-lg group-hover:bg-emerald-500/30 transition-colors">
+                <LifeBuoy size={20} className='text-emerald-400' />
+              </div>
+              <div className='flex-1'>
+                <p className='text-sm font-semibold text-white'>Help Desk</p>
+                <p className='text-xs text-gray-400 leading-tight'>Create support tickets</p>
+              </div>
+            </div>
+          </div>
         </>
       ) : (
         <>
@@ -136,7 +161,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               <div>
                 <h3 className="text-lg font-semibold text-white">
                   {selectedNode?.type === 'gemini' ? 'Gemini AI' :
-                   selectedNode?.type === 'instgram' ? 'Instagram' : 'Node'} Settings
+                   selectedNode?.type === 'instgram' ? 'Instagram' : 
+                   selectedNode?.type === 'helpDesk' ? 'Help Desk' : 'Node'} Settings
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <Hash size={12} className="text-gray-400" />
@@ -173,6 +199,23 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               <p className="text-xs text-indigo-300">✓ Prompt configured</p>
             </div>
           )}
+        </div>
+      )}
+
+      {selectedType === 'helpDesk' && isEditingNode && (
+        <div className="space-y-3">
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <LifeBuoy size={16} className="text-emerald-400" />
+              <p className="text-sm font-medium text-emerald-300">Help Desk Settings</p>
+            </div>
+            
+            <div className="mt-3 border-t border-emerald-500/20 pt-3">
+              <p className="text-xs text-gray-400">
+                Configure how support tickets are created and managed. You can edit the template and category directly on the node.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

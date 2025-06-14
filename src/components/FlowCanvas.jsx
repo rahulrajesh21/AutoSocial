@@ -12,6 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import InstagramNode from '../custom_nodes/InstgramNode'; 
 import GeminiNode from '../custom_nodes/geminiNode';
+import HelpDeskNode from '../custom_nodes/HelpDeskNode';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { updateTemplate, getWorkflowById } from '../utils/api';
@@ -63,7 +64,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
         const flowsList = localStorage.getItem(`reactflow-saved-flows-${id}`);
         if (flowsList) {
           const flows = JSON.parse(flowsList);
-          // Ensure flows is always an array
           setSavedFlows(Array.isArray(flows) ? flows : []);
         } else {
           setSavedFlows([]);
@@ -77,23 +77,52 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     loadSavedFlows();
   }, [id]);
 
-  // Node update handler
+  // FIXED: Node update handler
   const handleNodeUpdate = useCallback((updatedNodeData) => {
+    console.log('handleNodeUpdate called with:', updatedNodeData);
+    
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === updatedNodeData.id) {
-          return {
+          const updatedNode = {
             ...node,
             data: {
               ...node.data,
-              ...updatedNodeData.data,
+              ...updatedNodeData,
+              // Preserve the callback functions
+              onRun: node.data.onRun,
+              onUpdate: node.data.onUpdate,
+              onDataChange: node.data.onDataChange,
             },
           };
+          console.log('Node updated:', updatedNode);
+          return updatedNode;
         }
         return node;
       })
     );
   }, [setNodes]);
+
+  // FIXED: Helper function to create nodes with proper callbacks
+  const createNodeWithCallbacks = useCallback((node) => ({
+    ...node,
+    data: {
+      ...node.data,
+      onRun: () => {
+        console.log(`Running node ${node.id}`);
+      },
+      onUpdate: handleNodeUpdate,
+      onDataChange: (newData) => {
+        console.log('onDataChange called with:', newData);
+        // Ensure the ID is always included
+        const dataWithId = {
+          ...newData,
+          id: newData.id || node.id
+        };
+        handleNodeUpdate(dataWithId);
+      }
+    }
+  }), [handleNodeUpdate]);
 
   // Load flow data on component mount
   useEffect(() => {
@@ -107,24 +136,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
           const flow = workflowData.automation_template;
           
           if (flow.nodes && flow.edges) {
-            // Add onRun and onUpdate functions to node data
-            const nodesWithCallbacks = flow.nodes.map(node => ({
-              ...node,
-              data: {
-                ...node.data,
-                onRun: () => {
-                  console.log(`Running node ${node.id}`);
-                },
-                onUpdate: handleNodeUpdate
-              }
-            }));
-            
+            const nodesWithCallbacks = flow.nodes.map(createNodeWithCallbacks);
             setNodes(nodesWithCallbacks);
             setEdges(flow.edges);
             
-            // Also save as last flow in localStorage for backup
             localStorage.setItem(`reactflow-last-flow-${id}`, JSON.stringify(flow));
-            
             toast.success('Flow loaded successfully');
             setLoading(false);
             return;
@@ -142,24 +158,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
             const flow = serverWorkflowData.automation_template;
             
             if (flow.nodes && flow.edges) {
-              // Add onRun and onUpdate functions to node data
-              const nodesWithCallbacks = flow.nodes.map(node => ({
-                ...node,
-                data: {
-                  ...node.data,
-                  onRun: () => {
-                    console.log(`Running node ${node.id}`);
-                  },
-                  onUpdate: handleNodeUpdate
-                }
-              }));
-              
+              const nodesWithCallbacks = flow.nodes.map(createNodeWithCallbacks);
               setNodes(nodesWithCallbacks);
               setEdges(flow.edges);
               
-              // Also save as last flow in localStorage for backup
               localStorage.setItem(`reactflow-last-flow-${id}`, JSON.stringify(flow));
-              
               toast.success('Flow loaded from server');
               setLoading(false);
               return;
@@ -173,18 +176,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
         if (lastFlow) {
           const flow = JSON.parse(lastFlow);
           if (flow.nodes && flow.edges) {
-            // Add onRun and onUpdate functions to node data
-            const nodesWithCallbacks = flow.nodes.map(node => ({
-              ...node,
-              data: {
-                ...node.data,
-                onRun: () => {
-                  console.log(`Running node ${node.id}`);
-                },
-                onUpdate: handleNodeUpdate
-              }
-            }));
-            
+            const nodesWithCallbacks = flow.nodes.map(createNodeWithCallbacks);
             setNodes(nodesWithCallbacks);
             setEdges(flow.edges);
             toast.info('Flow loaded from local storage');
@@ -198,10 +190,10 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       }
     };
 
-    if (handleNodeUpdate && id) {
+    if (id) {
       loadFlowData();
     }
-  }, [setNodes, setEdges, handleNodeUpdate, id, getToken, workflowData]);
+  }, [setNodes, setEdges, createNodeWithCallbacks, id, getToken, workflowData]);
 
   const onConnect = useCallback((connection) => {
     const edge = { ...connection, animated: true, id: `edge-${+new Date()}` };
@@ -210,7 +202,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
 
   const nodeTypes = {
     instgram: InstagramNode,
-    gemini: GeminiNode
+    gemini: GeminiNode,
+    helpDesk: HelpDeskNode
   };
 
   const onDrop = useCallback((event) => {
@@ -235,17 +228,17 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     
     let nodeData = {
       id: nodeId,
-      onRun: () => {
-        console.log(`Running node ${nodeId}`);
-      },
-      onUpdate: handleNodeUpdate
     };
 
     if (nodeType === 'gemini') {
       nodeData.prompt = prompt || '';
     } else if (nodeType === 'instgram') {
       nodeData.label = label || 'Instagram';
-      nodeData.selectedOption = null; // No option selected initially
+      nodeData.selectedOption = null;
+    } else if (nodeType === 'helpDesk') {
+      nodeData.category = 'technical';
+      nodeData.responseTemplate = '';
+      nodeData.createTicket = true;
     }
 
     const newNode = {
@@ -254,8 +247,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       position,
       data: nodeData
     };
-    setNodes((nds) => nds.concat(newNode));
-  }, [setNodes, handleNodeUpdate]);
+
+    // Apply callbacks to the new node
+    const nodeWithCallbacks = createNodeWithCallbacks(newNode);
+    setNodes((nds) => nds.concat(nodeWithCallbacks));
+  }, [setNodes, createNodeWithCallbacks]);
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -263,7 +259,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   }, []);
 
   const onNodeClick = useCallback((event, node) => {
-    // Prevent the click from propagating if it's from the Instagram options modal
     if (event.defaultPrevented) return;
     
     setSelectedNodeId(node.id);
@@ -278,7 +273,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     }
   }, [onNodeUpdate, handleNodeUpdate]);
 
-  // Handle background click to deselect node
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
     if (onNodeSelect) {
@@ -292,7 +286,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     
     const flow = rfInstance.toObject();
     
-    // Clean up the flow data to ensure it's serializable
     return {
       nodes: flow.nodes.map(node => ({
         id: node.id,
@@ -304,17 +297,21 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
           ...(node.type === 'instgram' ? { 
             label: node.data.label || 'Instagram',
             selectedOption: node.data.selectedOption,
-            // Include selected post data if available
             ...(node.data.selectedPost ? {
               selectedPost: {
                 id: node.data.selectedPost.id,
                 caption: node.data.selectedPost.caption,
                 media_type: node.data.selectedPost.media_type,
-                mediaId: node.data.selectedPost.id, // Store media ID for API calls
-                username: node.data.selectedPost.username || 'instagram_user', // Include username
+                mediaId: node.data.selectedPost.id,
+                username: node.data.selectedPost.username || 'instagram_user',
                 permalink: node.data.selectedPost.permalink
               }
             } : {})
+          } : {}),
+          ...(node.type === 'helpDesk' ? {
+            category: node.data.category || 'technical',
+            responseTemplate: node.data.responseTemplate || '',
+            createTicket: node.data.createTicket !== false
           } : {})
         }
       })),
@@ -327,13 +324,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     try {
       setLoading(true);
       
-      // Save to localStorage
       const storageKey = flowName ? `reactflow-flow-${id}-${flowName}` : `reactflow-last-flow-${id}`;
       localStorage.setItem(storageKey, JSON.stringify(flowData));
       
-      // Get token and save to server
       const token = await getToken();
-      await updateTemplate(token, id,flowData);
+      await updateTemplate(token, id, flowData);
       
       return true;
     } catch (error) {
@@ -379,7 +374,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     try {
       await saveFlowData(flowData, flowName);
       
-      // Update saved flows list
       const updatedFlows = [...savedFlows.filter(f => f !== flowName), flowName];
       setSavedFlows(updatedFlows);
       localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
@@ -403,24 +397,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       if (flowData) {
         const flow = JSON.parse(flowData);
         if (flow.nodes && flow.edges) {
-          // Add onRun and onUpdate functions to node data
-          const nodesWithCallbacks = flow.nodes.map(node => ({
-            ...node,
-            data: {
-              ...node.data,
-              onRun: () => {
-                console.log(`Running node ${node.id}`);
-              },
-              onUpdate: handleNodeUpdate
-            }
-          }));
-          
+          const nodesWithCallbacks = flow.nodes.map(createNodeWithCallbacks);
           setNodes(nodesWithCallbacks);
           setEdges(flow.edges);
           
-          // Also save as last flow
           localStorage.setItem(`reactflow-last-flow-${id}`, flowData);
-          
           setIsLoadModalOpen(false);
           alert(`Flow "${name}" loaded successfully!`);
         } else {
@@ -440,10 +421,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const deleteFlow = (name, event) => {
     event.stopPropagation();
     if (window.confirm(`Are you sure you want to delete flow "${name}"?`)) {
-      // Remove from localStorage
       localStorage.removeItem(`reactflow-flow-${id}-${name}`);
       
-      // Update saved flows list
       const updatedFlows = savedFlows.filter(f => f !== name);
       setSavedFlows(updatedFlows);
       localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
@@ -482,23 +461,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       try {
         const flowData = JSON.parse(e.target.result);
         if (flowData.nodes && flowData.edges) {
-          const nodesWithCallbacks = flowData.nodes.map(node => ({
-            ...node,
-            data: {
-              ...node.data,
-              onRun: () => {
-                console.log(`Running node ${node.id}`);
-              },
-              onUpdate: handleNodeUpdate
-            }
-          }));
-          
+          const nodesWithCallbacks = flowData.nodes.map(createNodeWithCallbacks);
           setNodes(nodesWithCallbacks);
           setEdges(flowData.edges);
           
-          // Save the imported flow
           await saveFlowData(flowData);
-          
           alert('Flow imported successfully!');
         } else {
           alert('Invalid flow data format');
@@ -508,7 +475,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
         alert('Failed to import flow: Invalid JSON format');
       }
       
-      // Reset file input
       event.target.value = '';
     };
     
