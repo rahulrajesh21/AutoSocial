@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+
+const API_BASE_URL =  'http://localhost:3000';
 
 const Settings = () => {
   const [apiKeys, setApiKeys] = useState({
@@ -9,13 +12,29 @@ const Settings = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Load saved keys on component mount
+  // Load settings from API on component mount
   useEffect(() => {
-    const savedKeys = localStorage.getItem('social_api_keys');
-    if (savedKeys) {
-      setApiKeys(JSON.parse(savedKeys));
-    }
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/instagram/settings`, {
+        withCredentials: true
+      });
+      
+      if (response.data) {
+        setApiKeys({
+          instagram_access_token: response.data.access_token || '',
+          instagram_page_token: response.data.page_access_token || '',
+          instagram_api_key: '' // Not stored in backend
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast.error('Failed to load settings');
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,20 +44,27 @@ const Settings = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
-    // Save to localStorage
-    localStorage.setItem('social_api_keys', JSON.stringify(apiKeys));
-    
-    // Here you would typically also save to your backend
-    // For example: axios.post('/api/settings/update', apiKeys)
-    
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Save to backend
+      await axios.post(`${API_BASE_URL}/api/instagram/settings`, {
+        instagram_access_token: apiKeys.instagram_access_token,
+        instagram_page_token: apiKeys.instagram_page_token,
+        instagram_api_key: apiKeys.instagram_api_key
+      }, {
+        withCredentials: true
+      });
+      
       toast.success('Settings saved successfully');
-    }, 500);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
