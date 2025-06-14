@@ -19,6 +19,25 @@ export async function createWorkflow(name, description, token) {
 }
 
 
+export async function createScheduledPost(token, formData) {
+  console.log('Creating scheduled post with data:', formData);
+  
+  const res = await fetch(`http://localhost:3000/api/CreateScheduleAutomation`, {
+    method: 'POST',
+    headers: {
+     
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData, 
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Failed to create scheduled post');
+  }
+  return res.json();
+}
+
 export async function updateTemplate(token,id,flowData){
   console.log(flowData)
   const res = await fetch(
