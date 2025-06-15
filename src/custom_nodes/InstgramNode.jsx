@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Check,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  ImageIcon
 } from 'lucide-react';
 import { useAuth } from '@clerk/clerk-react';
 import { getInstagramPosts } from '../utils/api';
@@ -164,7 +165,7 @@ const PostSelectionModal = ({ isOpen, onClose, onSelect, currentSelection, posts
                     <div className="flex-shrink-0">
                       {post.media_type === 'IMAGE' && <Image size={20} className="text-green-400" />}
                       {post.media_type === 'VIDEO' && <Video size={20} className="text-blue-400" />}
-                      {post.media_type === 'CAROUSEL_ALBUM' && <Images size={20} className="text-purple-400" />}
+                      {post.media_type === 'CAROUSEL_ALBUM' && <ImageIcon size={20} className="text-purple-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -342,18 +343,28 @@ const InstagramNode = ({ data, selected }) => {
 
   const handleOptionSelect = (option) => {
     // Update the node data with the selected option
-    if (data.onUpdate) {
+    if (data.onDataChange) {
+      // Use onDataChange instead of onUpdate for consistency with other nodes
+      data.onDataChange({
+        ...data,
+        selectedOption: option.id,
+        label: option.title,
+        // Clear selected post when changing options
+        selectedPost: null
+      });
+    } else if (data.onUpdate) {
+      // Fallback to onUpdate if onDataChange is not available
       data.onUpdate({
         id: data.id,
         data: {
           ...data,
           selectedOption: option.id,
           label: option.title,
-          // Clear selected post when changing options
           selectedPost: null
         }
       });
     }
+    
     setIsModalOpen(false);
     
     // If this option requires post selection, open post modal
@@ -378,7 +389,12 @@ const InstagramNode = ({ data, selected }) => {
   };
 
   const handlePostSelect = (post) => {
-    if (data.onUpdate) {
+    if (data.onDataChange) {
+      data.onDataChange({
+        ...data,
+        selectedPost: post
+      });
+    } else if (data.onUpdate) {
       data.onUpdate({
         id: data.id,
         data: {
