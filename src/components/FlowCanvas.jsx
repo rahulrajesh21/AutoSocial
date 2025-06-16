@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import InstagramNode from '../custom_nodes/InstgramNode'; 
 import GeminiNode from '../custom_nodes/geminiNode';
 import HelpDeskNode from '../custom_nodes/HelpDeskNode';
+import TriggerNode from '../custom_nodes/TriggerNode';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { updateTemplate, getWorkflowById } from '../utils/api';
@@ -203,7 +204,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const nodeTypes = {
     instgram: InstagramNode,
     gemini: GeminiNode,
-    helpDesk: HelpDeskNode
+    helpDesk: HelpDeskNode,
+    trigger: TriggerNode
   };
 
   const onDrop = useCallback((event) => {
@@ -239,6 +241,9 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       nodeData.category = 'technical';
       nodeData.responseTemplate = '';
       nodeData.createTicket = true;
+    } else if (nodeType === 'trigger') {
+      nodeData.triggerWord = '';
+      nodeData.caseSensitive = false;
     }
 
     const newNode = {
@@ -312,6 +317,10 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
             category: node.data.category || 'technical',
             responseTemplate: node.data.responseTemplate || '',
             createTicket: node.data.createTicket !== false
+          } : {}),
+          ...(node.type === 'trigger' ? {
+            triggerWord: node.data.triggerWord || '',
+            caseSensitive: node.data.caseSensitive || false
           } : {})
         }
       })),
