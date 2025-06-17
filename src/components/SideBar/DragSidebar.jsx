@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Instagram, Settings, Edit3, Hash, MessageCircle, LampDesk, LifeBuoy, Zap } from 'lucide-react';
+import { Brain, Instagram, Settings, Edit3, Hash, MessageCircle, LampDesk, LifeBuoy, Zap, Type } from 'lucide-react';
 
 const DragSidebar = ({ selectedNode, onUpdateNode }) => {
   const [selectedType, setSelectedType] = useState(null);
@@ -33,6 +33,9 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
       nodeData.label = 'Trigger Word';
       nodeData.triggerWord = '';
       nodeData.caseSensitive = false;
+    } else if (nodeType === 'text') {
+      nodeData.label = 'Static Text';
+      nodeData.text = '';
     }
     event.dataTransfer.setData(
       'application/reactflow',
@@ -74,6 +77,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
         return <LifeBuoy size={20} className='text-emerald-400' />;
       case 'trigger':
         return <Zap size={20} className='text-orange-400' />;
+      case 'text':
+        return <Type size={20} className='text-blue-400' />;
       default:
         return <Settings size={20} className='text-gray-400' />;
     }
@@ -89,6 +94,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
         return 'border-emerald-500/30 bg-emerald-500/10';
       case 'trigger':
         return 'border-orange-500/30 bg-orange-500/10';
+      case 'text':
+        return 'border-blue-500/30 bg-blue-500/10';
       default:
         return 'border-gray-500/30 bg-gray-500/10';
     }
@@ -143,7 +150,7 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               </div>
             </div>
           </div>
-          
+
           <div
             className="flex p-3 bg-secondary border-2 border-borderColor rounded-lg cursor-move hover:border-emerald-500/50 transition-colors duration-200 group"
             onClick={() => handleClick('helpDesk')}
@@ -177,6 +184,23 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
               </div>
             </div>
           </div>
+
+          <div
+            className="flex p-3 bg-secondary border-2 border-borderColor rounded-lg cursor-move hover:border-blue-500/50 transition-colors duration-200 group"
+            onClick={() => handleClick('text')}
+            onDragStart={(e) => onDragStart(e, 'text')}
+            draggable
+          >
+            <div className='flex items-center mr-2 gap-3 w-full'>
+              <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                <Type size={20} className='text-blue-400' />
+              </div>
+              <div className='flex-1'>
+                <p className='text-sm font-semibold text-white'>Static Text</p>
+                <p className='text-xs text-gray-400 leading-tight'>Add text to your workflow</p>
+              </div>
+            </div>
+          </div>
         </>
       ) : (
         <>
@@ -188,7 +212,8 @@ const DragSidebar = ({ selectedNode, onUpdateNode }) => {
                   {selectedNode?.type === 'gemini' ? 'Gemini AI' :
                    selectedNode?.type === 'instgram' ? 'Instagram' : 
                    selectedNode?.type === 'helpDesk' ? 'Help Desk' : 
-                   selectedNode?.type === 'trigger' ? 'Trigger Word' : 'Node'} Settings
+                   selectedNode?.type === 'trigger' ? 'Trigger Word' :
+                   selectedNode?.type === 'text' ? 'Static Text' : 'Node'} Settings
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <Hash size={12} className="text-gray-400" />

@@ -14,6 +14,7 @@ import InstagramNode from '../custom_nodes/InstgramNode';
 import GeminiNode from '../custom_nodes/geminiNode';
 import HelpDeskNode from '../custom_nodes/HelpDeskNode';
 import TriggerNode from '../custom_nodes/TriggerNode';
+import TextNode from '../custom_nodes/TextNode';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { updateTemplate, getWorkflowById } from '../utils/api';
@@ -205,7 +206,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     instgram: InstagramNode,
     gemini: GeminiNode,
     helpDesk: HelpDeskNode,
-    trigger: TriggerNode
+    trigger: TriggerNode,
+    text: TextNode
   };
 
   const onDrop = useCallback((event) => {
@@ -244,6 +246,17 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     } else if (nodeType === 'trigger') {
       nodeData.triggerWord = '';
       nodeData.caseSensitive = false;
+    } else if (nodeType === 'text') {
+      nodeData.text = '';
+      nodeData.onDataChange = (updatedData) => {
+        setNodes((nds) => 
+          nds.map((n) => 
+            n.id === updatedData.id 
+              ? { ...n, data: { ...n.data, text: updatedData.text } } 
+              : n
+          )
+        );
+      };
     }
 
     const newNode = {
@@ -321,6 +334,9 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
           ...(node.type === 'trigger' ? {
             triggerWord: node.data.triggerWord || '',
             caseSensitive: node.data.caseSensitive || false
+          } : {}),
+          ...(node.type === 'text' ? {
+            text: node.data.text || ''
           } : {})
         }
       })),
