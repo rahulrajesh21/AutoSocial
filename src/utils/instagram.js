@@ -3,8 +3,8 @@
 // Instagram App credentials - replace with your own from Facebook Developer Portal
 const INSTAGRAM_APP_ID = import.meta.env.VITE_INSTAGRAM_ACCESS;
 const INSTAGRAM_APP_SECRET = import.meta.env.VITE_INSTAGRAM_SECRET;
-// Use the updated ngrok URL
-const INSTAGRAM_REDIRECT_URI = 'https://better-utterly-meerkat.ngrok-free.app/auth/instagram/callback';
+// Update to use Vercel URL
+const INSTAGRAM_REDIRECT_URI = 'https://auto-social-backend.vercel.app/auth/instagram/callback';
 
 /**
  * Initiates the Instagram OAuth flow

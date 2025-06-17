@@ -1,7 +1,7 @@
-const BASE_URL = '/api';
+const BASE_URL = 'https://auto-social-backend.vercel.app/api';
 
 export async function createWorkflow(name, description, token) {
-  const res = await fetch(`http://localhost:3000/api/Createworkflow`, {
+  const res = await fetch(`${BASE_URL}/Createworkflow`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -23,7 +23,7 @@ export async function createScheduledPost(token, formData) {
   console.log('Creating scheduled post with data:', formData);
   
   try {
-    const res = await fetch(`http://localhost:3000/api/CreateScheduleAutomation`, {
+    const res = await fetch(`${BASE_URL}/CreateScheduleAutomation`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -55,7 +55,7 @@ export async function createScheduledPost(token, formData) {
 export async function updateTemplate(token,id,flowData){
   console.log(flowData)
   const res = await fetch(
-    `http://localhost:3000/api/CreateAutomation`,
+    `${BASE_URL}/CreateAutomation`,
     {
       method: 'POST',
       headers:{
@@ -69,7 +69,7 @@ export async function updateTemplate(token,id,flowData){
 }
 
 export async function getAllWorkflows(token) {
-  const res = await fetch(`http://localhost:3000/api/GetAllworkflows`,{
+  const res = await fetch(`${BASE_URL}/GetAllworkflows`,{
     method: 'GET',
     headers:{
       'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export async function getAllWorkflows(token) {
 }
 
 export async function getWorkflowById(token, id) {
-  const res = await fetch(`http://localhost:3000/api/GetWorkflowById/${id}`, {
+  const res = await fetch(`${BASE_URL}/GetWorkflowById/${id}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export async function getWorkflowById(token, id) {
 }
 
 export async function getInstagramPosts(token) {
-  const res = await fetch(`http://localhost:3000/api/Getints`, {
+  const res = await fetch(`${BASE_URL}/Getints`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ export async function getInstagramPosts(token) {
 }
 
 export async function updateAutomationStatus(token, id, status) {
-  const res = await fetch(`http://localhost:3000/api/UpdateAutomationStatus`, {
+  const res = await fetch(`${BASE_URL}/UpdateAutomationStatus`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

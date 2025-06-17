@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { Settings as SettingsIcon, Instagram, RefreshCw, Save, Lock, Globe } from 'lucide-react';
+import { useAuth } from '@clerk/clerk-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Update the base URL to use the Vercel deployment
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://auto-social-backend.vercel.app';
 
 const Settings = () => {
   const [apiKeys, setApiKeys] = useState({
