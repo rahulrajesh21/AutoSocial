@@ -103,7 +103,7 @@ const Home = () => {
   const [suggestionCategory, setSuggestionCategory] = useState('new-user'); // Default suggestion category
   const { getToken } = useAuth();
   
-  useEffect(() => {
+ useEffect(() => {
     const fetchWorkflows = async () => {
       setIsLoading(true);
       try {
@@ -112,7 +112,7 @@ const Home = () => {
         
         // Check if data exists and set workflows accordingly
         if (data) {
-          setWorkflows(data);
+        setWorkflows(data);
         } else {
           // If API returns null/undefined but didn't throw error, it means no workflows yet
           setWorkflows([]);
@@ -121,7 +121,7 @@ const Home = () => {
         console.error('Error fetching workflows:', err);
         // Only show error toast for actual API failures, not empty states
         if (err.message && err.message !== 'No workflows found') {
-          toast.error('Failed to fetch workflows');
+        toast.error('Failed to fetch workflows');
         } else {
           // Reset to empty array in case of "no workflows" error
           setWorkflows([]);
@@ -322,7 +322,7 @@ const Home = () => {
                     </>
                   )}
                 </button>
-                <button
+        <button
                   onClick={() => {
                     setSelectedTemplate(null);
                     setShowPopup(true);
@@ -331,7 +331,7 @@ const Home = () => {
                 >
                   <Plus size={18} className="text-white" />
                   <span className="font-medium text-sm">New Workflow</span>
-                </button>
+        </button>
               </div>
             </div>
           </div>
