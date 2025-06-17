@@ -137,7 +137,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     loadSavedFlows();
   }, [id]);
   
-  // Node update handler - moved before onDrop to fix the reference error
+  // Node update handler
   const handleNodeUpdate = useCallback((updatedNodeData) => {
     console.log('handleNodeUpdate called with:', updatedNodeData);
     
@@ -162,95 +162,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       })
     );
   }, [setNodes]);
-  
-  // Event handlers for drag-and-drop
-  const onDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const onDrop = useCallback(
-    (event) => {
-      event.preventDefault();
-
-      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
-      const rawData = event.dataTransfer.getData('application/reactflow');
-      
-      if (!rawData) return;
-      
-      let data;
-      try {
-        data = JSON.parse(rawData);
-      } catch (error) {
-        console.error("Failed to parse drag data", error);
-        return;
-      }
-      
-      const position = rfInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
-
-      const id = `${data.nodeType}_${Date.now()}`;
-      let newNode = {
-        id,
-        type: data.nodeType,
-        position,
-        data: { id, label: `${data.nodeType} node` },
-      };
-      
-      // Add specific properties based on node type
-      if (data.nodeType === 'gemini') {
-        newNode.data.label = 'Gemini AI';
-        newNode.data.prompt = data.prompt || '';
-        newNode.data.temperature = 0.7;
-        newNode.data.maxTokens = 1000;
-      } else if (data.nodeType === 'instgram') {
-        newNode.data.label = 'Instagram'; 
-        newNode.data.selectedOption = 'get-posts';
-        newNode.data.username = '';
-        newNode.data.postsCount = 5;
-      } else if (data.nodeType === 'helpDesk') {
-        newNode.data.label = 'Help Desk';
-        newNode.data.category = data.category || 'technical';
-        newNode.data.createTicket = data.createTicket || true;
-        newNode.data.priority = 'medium';
-      } else if (data.nodeType === 'trigger') {
-        newNode.data.label = 'Trigger Word';
-        newNode.data.triggerWord = data.triggerWord || '';
-        newNode.data.caseSensitive = data.caseSensitive || false;
-      } else if (data.nodeType === 'text') {
-        newNode.data.label = 'Static Text';
-        newNode.data.text = data.text || '';
-      }
-      
-      // Add the node with callback functions
-      newNode = {
-        ...newNode,
-        data: {
-          ...newNode.data,
-          onRun: () => {
-            console.log(`Running node ${id}`);
-          },
-          onUpdate: handleNodeUpdate,
-          onDataChange: (newData) => {
-            // Ensure the ID is always included
-            const dataWithId = {
-              ...newData,
-              id: newData.id || id
-            };
-            handleNodeUpdate(dataWithId);
-          }
-        }
-      };
-      
-      // Add animation class for entrance effect
-      newNode.className = 'animate-nodeEntrance';
-      
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [rfInstance, handleNodeUpdate, setNodes]
-  );
 
   // Helper function to create nodes with proper callbacks
   const createNodeWithCallbacks = useCallback((node) => ({
@@ -272,6 +183,69 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       }
     }
   }), [handleNodeUpdate]);
+  
+  // Event handlers for drag-and-drop - SIMPLIFIED as requested
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback((event) => {
+    event.preventDefault();
+
+    const dataStr = event.dataTransfer.getData('application/reactflow');
+    if (!dataStr) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(dataStr);
+    } catch (err) {
+      console.error("Invalid node data:", err);
+      return;
+    }
+
+    const { nodeType, prompt, label } = parsed;
+    if (!nodeType) return;
+
+    // Simple position calculation with fixed offset from sidebar
+    const position = { x: event.clientX - 300, y: event.clientY - 50 };
+    const nodeId = `${nodeType}_${Date.now()}`;
+    
+    let nodeData = {
+      id: nodeId,
+      label: label || `${nodeType} node`
+    };
+
+    if (nodeType === 'gemini') {
+      nodeData.prompt = prompt || '';
+      nodeData.temperature = 0.7;
+      nodeData.maxTokens = 1000;
+    } else if (nodeType === 'instgram') {
+      nodeData.selectedOption = parsed.selectedOption || 'get-posts';
+      nodeData.username = '';
+      nodeData.postsCount = 5;
+    } else if (nodeType === 'helpDesk') {
+      nodeData.category = parsed.category || 'technical';
+      nodeData.createTicket = parsed.createTicket || true;
+      nodeData.priority = 'medium';
+    } else if (nodeType === 'trigger') {
+      nodeData.triggerWord = parsed.triggerWord || '';
+      nodeData.caseSensitive = parsed.caseSensitive || false;
+    } else if (nodeType === 'text') {
+      nodeData.text = parsed.text || '';
+    }
+
+    const newNode = {
+      id: nodeId,
+      type: nodeType,
+      position,
+      data: nodeData
+    };
+
+    // Apply callbacks to the new node
+    const nodeWithCallbacks = createNodeWithCallbacks(newNode);
+    setNodes((nds) => nds.concat(nodeWithCallbacks));
+  }, [setNodes, createNodeWithCallbacks]);
 
   // Load flow data on component mount
   useEffect(() => {
@@ -366,7 +340,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     }
   }, [onNodeSelect]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (onNodeUpdate) {
       onNodeUpdate(handleNodeUpdate);
     }
@@ -426,7 +400,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   }, [rfInstance]);
 
   // Save flow to both local storage and server
-  const saveFlowData = async (flowData, flowName = null) => {
+  const saveFlowData = useCallback(async (flowData, flowName = null) => {
     try {
       setLoading(true);
       
@@ -443,7 +417,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, getToken]);
 
   const onQuickSave = useCallback(async () => {
     const flowData = getFlowData();
@@ -527,7 +501,6 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const deleteFlow = (name, event) => {
     event.stopPropagation();
     
-    // Use toast confirmation instead of alert
     if (window.confirm(`Are you sure you want to delete flow "${name}"?`)) {
       localStorage.removeItem(`reactflow-flow-${id}-${name}`);
       
