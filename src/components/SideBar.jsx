@@ -44,7 +44,6 @@ export const SideBar = ({ isAutomationsDesigner = false }) => {
     { path: '/', label: 'Home', icon: Home },
     { path: '/contacts', label: 'Contacts', icon: Users },
     { path: '/automations', label: 'Automations', icon: Zap },
-    { path: '/integrations', label: 'Integrations', icon: Puzzle },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 

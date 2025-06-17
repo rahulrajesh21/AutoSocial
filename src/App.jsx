@@ -8,7 +8,6 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Contacts from './pages/Contacts';
 import Automations from './pages/Automations';
-import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import HelpDetail from './pages/help/HelpDetail';
@@ -42,7 +41,6 @@ export default function App() {
             <Route index element={<Home />} />
             <Route path="contacts" element={<Contacts />} />
             <Route path="automations" element={<Automations />} />
-            <Route path="integrations" element={<Integrations />} />
             <Route path="settings" element={<Settings />} />
             <Route path="help" element={<Help />} />
             <Route path="help/:category" element={<HelpDetail />} />
