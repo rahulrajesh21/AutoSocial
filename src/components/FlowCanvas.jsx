@@ -8,6 +8,7 @@ import {
   useNodesState,
   useEdgesState,
   Panel,
+  MiniMap,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import InstagramNode from '../custom_nodes/InstgramNode'; 
@@ -19,26 +20,65 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { updateTemplate, getWorkflowById } from '../utils/api';
 import { toast } from 'react-toastify';
+import { 
+  Save, 
+  FileDown, 
+  FileUp, 
+  List, 
+  LoaderCircle,
+  Save as SaveAs,
+  X,
+  Trash2
+} from 'lucide-react';
 
-// Simple Modal Component
+// Enhanced Modal Component
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-white">{title}</h3>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+      <div className="bg-slate-800 rounded-xl p-6 w-96 max-w-full shadow-2xl border border-slate-700 animate-scaleIn">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl"
+            className="text-slate-400 hover:text-white rounded-full p-1 hover:bg-slate-700 transition-colors"
+            aria-label="Close"
           >
-            &times;
+            <X size={18} />
           </button>
         </div>
-        {children}
+        <div className="space-y-4">
+          {children}
+        </div>
       </div>
     </div>
+  );
+};
+
+// Button component for consistent styling
+const Button = ({ onClick, disabled, variant = 'primary', icon, children, className = '' }) => {
+  const baseClasses = "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800",
+    success: "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800",
+    warning: "bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700",
+    danger: "bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800",
+    secondary: "bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800",
+    tertiary: "bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800",
+    ghost: "bg-slate-700/40 text-white hover:bg-slate-700/80 active:bg-slate-700"
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${variants[variant]} ${className}`}
+    >
+      {icon && <span className="flex-shrink-0">{icon}</span>}
+      {children}
+    </button>
   );
 };
 
@@ -59,6 +99,24 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const { id } = useParams();
   const { getToken } = useAuth();
 
+  // Node types
+  const nodeTypes = {
+    instgram: InstagramNode,
+    gemini: GeminiNode,
+    helpDesk: HelpDeskNode,
+    trigger: TriggerNode,
+    text: TextNode,
+  };
+  
+  // Default edge options
+  const defaultEdgeOptions = {
+    animated: true,
+    style: {
+      stroke: '#94a3b8',
+      strokeWidth: 2,
+    },
+  };
+
   // Load saved flows list on component mount
   useEffect(() => {
     const loadSavedFlows = () => {
@@ -78,8 +136,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
 
     loadSavedFlows();
   }, [id]);
-
-  // FIXED: Node update handler
+  
+  // Node update handler - moved before onDrop to fix the reference error
   const handleNodeUpdate = useCallback((updatedNodeData) => {
     console.log('handleNodeUpdate called with:', updatedNodeData);
     
@@ -104,8 +162,97 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       })
     );
   }, [setNodes]);
+  
+  // Event handlers for drag-and-drop
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
 
-  // FIXED: Helper function to create nodes with proper callbacks
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+
+      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      const rawData = event.dataTransfer.getData('application/reactflow');
+      
+      if (!rawData) return;
+      
+      let data;
+      try {
+        data = JSON.parse(rawData);
+      } catch (error) {
+        console.error("Failed to parse drag data", error);
+        return;
+      }
+      
+      const position = rfInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
+
+      const id = `${data.nodeType}_${Date.now()}`;
+      let newNode = {
+        id,
+        type: data.nodeType,
+        position,
+        data: { id, label: `${data.nodeType} node` },
+      };
+      
+      // Add specific properties based on node type
+      if (data.nodeType === 'gemini') {
+        newNode.data.label = 'Gemini AI';
+        newNode.data.prompt = data.prompt || '';
+        newNode.data.temperature = 0.7;
+        newNode.data.maxTokens = 1000;
+      } else if (data.nodeType === 'instgram') {
+        newNode.data.label = 'Instagram'; 
+        newNode.data.selectedOption = 'get-posts';
+        newNode.data.username = '';
+        newNode.data.postsCount = 5;
+      } else if (data.nodeType === 'helpDesk') {
+        newNode.data.label = 'Help Desk';
+        newNode.data.category = data.category || 'technical';
+        newNode.data.createTicket = data.createTicket || true;
+        newNode.data.priority = 'medium';
+      } else if (data.nodeType === 'trigger') {
+        newNode.data.label = 'Trigger Word';
+        newNode.data.triggerWord = data.triggerWord || '';
+        newNode.data.caseSensitive = data.caseSensitive || false;
+      } else if (data.nodeType === 'text') {
+        newNode.data.label = 'Static Text';
+        newNode.data.text = data.text || '';
+      }
+      
+      // Add the node with callback functions
+      newNode = {
+        ...newNode,
+        data: {
+          ...newNode.data,
+          onRun: () => {
+            console.log(`Running node ${id}`);
+          },
+          onUpdate: handleNodeUpdate,
+          onDataChange: (newData) => {
+            // Ensure the ID is always included
+            const dataWithId = {
+              ...newData,
+              id: newData.id || id
+            };
+            handleNodeUpdate(dataWithId);
+          }
+        }
+      };
+      
+      // Add animation class for entrance effect
+      newNode.className = 'animate-nodeEntrance';
+      
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [rfInstance, handleNodeUpdate, setNodes]
+  );
+
+  // Helper function to create nodes with proper callbacks
   const createNodeWithCallbacks = useCallback((node) => ({
     ...node,
     data: {
@@ -198,83 +345,17 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   }, [setNodes, setEdges, createNodeWithCallbacks, id, getToken, workflowData]);
 
   const onConnect = useCallback((connection) => {
-    const edge = { ...connection, animated: true, id: `edge-${+new Date()}` };
+    const edge = { 
+      ...connection, 
+      animated: true, 
+      id: `edge-${+new Date()}`,
+      style: { stroke: '#6366f1', strokeWidth: 2 },
+      labelBgStyle: { fill: '#1e293b', color: '#fff', fillOpacity: 0.7 },
+      labelBgPadding: [8, 4],
+      labelBgBorderRadius: 4,
+    };
     setEdges((eds) => addEdge(edge, eds));
   }, [setEdges]);
-
-  const nodeTypes = {
-    instgram: InstagramNode,
-    gemini: GeminiNode,
-    helpDesk: HelpDeskNode,
-    trigger: TriggerNode,
-    text: TextNode
-  };
-
-  const onDrop = useCallback((event) => {
-    event.preventDefault();
-
-    const dataStr = event.dataTransfer.getData('application/reactflow');
-    if (!dataStr) return;
-
-    let parsed;
-    try {
-      parsed = JSON.parse(dataStr);
-    } catch (err) {
-      console.error("Invalid node data:", err);
-      return;
-    }
-
-    const { nodeType, prompt, label } = parsed;
-    if (!nodeType) return;
-
-    const position = { x: event.clientX - 300, y: event.clientY - 50 }; 
-    const nodeId = `${+new Date()}`;
-    
-    let nodeData = {
-      id: nodeId,
-    };
-
-    if (nodeType === 'gemini') {
-      nodeData.prompt = prompt || '';
-    } else if (nodeType === 'instgram') {
-      nodeData.label = label || 'Instagram';
-      nodeData.selectedOption = null;
-    } else if (nodeType === 'helpDesk') {
-      nodeData.category = 'technical';
-      nodeData.responseTemplate = '';
-      nodeData.createTicket = true;
-    } else if (nodeType === 'trigger') {
-      nodeData.triggerWord = '';
-      nodeData.caseSensitive = false;
-    } else if (nodeType === 'text') {
-      nodeData.text = '';
-      nodeData.onDataChange = (updatedData) => {
-        setNodes((nds) => 
-          nds.map((n) => 
-            n.id === updatedData.id 
-              ? { ...n, data: { ...n.data, text: updatedData.text } } 
-              : n
-          )
-        );
-      };
-    }
-
-    const newNode = {
-      id: nodeId,
-      type: nodeType,
-      position,
-      data: nodeData
-    };
-
-    // Apply callbacks to the new node
-    const nodeWithCallbacks = createNodeWithCallbacks(newNode);
-    setNodes((nds) => nds.concat(nodeWithCallbacks));
-  }, [setNodes, createNodeWithCallbacks]);
-
-  const onDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
 
   const onNodeClick = useCallback((event, node) => {
     if (event.defaultPrevented) return;
@@ -367,17 +448,17 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   const onQuickSave = useCallback(async () => {
     const flowData = getFlowData();
     if (!flowData) {
-      alert('No flow data to save');
+      toast.error('No flow data to save');
       return;
     }
 
     try {
       await saveFlowData(flowData);
-      alert('Flow saved successfully!');
+      toast.success('Flow saved successfully!');
     } catch (error) {
-      alert('Failed to save flow. Please try again.');
+      toast.error('Failed to save flow. Please try again.');
     }
-  }, [getFlowData, id, getToken]);
+  }, [getFlowData, saveFlowData]);
 
   const openSaveModal = () => {
     setFlowName('');
@@ -386,13 +467,13 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
 
   const saveNamedFlow = async () => {
     if (!flowName.trim()) {
-      alert('Please enter a name for your flow');
+      toast.error('Please enter a name for your flow');
       return;
     }
 
     const flowData = getFlowData();
     if (!flowData) {
-      alert('No flow data to save');
+      toast.error('No flow data to save');
       return;
     }
 
@@ -404,9 +485,9 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
       
       setIsSaveModalOpen(false);
-      alert(`Flow "${flowName}" saved successfully!`);
+      toast.success(`Flow "${flowName}" saved successfully!`);
     } catch (error) {
-      alert(`Failed to save flow "${flowName}". Please try again.`);
+      toast.error(`Failed to save flow "${flowName}". Please try again.`);
     }
   };
 
@@ -428,7 +509,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
           
           localStorage.setItem(`reactflow-last-flow-${id}`, flowData);
           setIsLoadModalOpen(false);
-          alert(`Flow "${name}" loaded successfully!`);
+          toast.success(`Flow "${name}" loaded successfully!`);
         } else {
           throw new Error('Invalid flow data format');
         }
@@ -437,7 +518,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       }
     } catch (error) {
       console.error(`Failed to load flow "${name}":`, error);
-      alert(`Failed to load flow "${name}"`);
+      toast.error(`Failed to load flow "${name}"`);
     } finally {
       setLoading(false);
     }
@@ -445,6 +526,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
 
   const deleteFlow = (name, event) => {
     event.stopPropagation();
+    
+    // Use toast confirmation instead of alert
     if (window.confirm(`Are you sure you want to delete flow "${name}"?`)) {
       localStorage.removeItem(`reactflow-flow-${id}-${name}`);
       
@@ -452,7 +535,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       setSavedFlows(updatedFlows);
       localStorage.setItem(`reactflow-saved-flows-${id}`, JSON.stringify(updatedFlows));
       
-      alert(`Flow "${name}" deleted successfully!`);
+      toast.success(`Flow "${name}" deleted`);
     }
   };
 
@@ -470,6 +553,8 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      
+      toast.info('Flow exported successfully');
     }
   }, [getFlowData, id]);
 
@@ -491,13 +576,13 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
           setEdges(flowData.edges);
           
           await saveFlowData(flowData);
-          alert('Flow imported successfully!');
+          toast.success('Flow imported successfully!');
         } else {
-          alert('Invalid flow data format');
+          toast.error('Invalid flow data format');
         }
       } catch (error) {
         console.error('Failed to parse imported flow:', error);
-        alert('Failed to import flow: Invalid JSON format');
+        toast.error('Failed to import flow: Invalid JSON format');
       }
       
       event.target.value = '';
@@ -507,7 +592,7 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   };
 
   return (
-    <div className="flex-1 h-screen bg-primary" onDrop={onDrop} onDragOver={onDragOver}>
+    <div className="flex-1 h-full flex bg-slate-900 relative overflow-hidden" onDrop={onDrop} onDragOver={onDragOver}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -518,50 +603,93 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         onInit={setRfInstance}
+        defaultEdgeOptions={defaultEdgeOptions}
+        fitView
+        className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
       >
-        <Background />
-        <Controls />
-        <Panel position="top-right" className="flex gap-2">
-          <button 
-            onClick={onQuickSave} 
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : 'Quick Save'}
-          </button>
-          <button 
-            onClick={openSaveModal} 
-            disabled={loading}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-md disabled:opacity-50"
-          >
-            Save As
-          </button>
-          <button 
-            onClick={openLoadModal} 
-            disabled={loading}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 shadow-md disabled:opacity-50"
-          >
-            Load
-          </button>
-          <button 
-            onClick={onExport} 
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 shadow-md"
-          >
-            Export
-          </button>
-          <button 
-            onClick={onImportClick} 
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 shadow-md"
-          >
-            Import
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={onImport}
-            accept=".json"
-            className="hidden"
-          />
+        <Background 
+          color="#4b5563" 
+          gap={24} 
+          size={1.5}
+          variant="dots" 
+        />
+        <Controls className="bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-1" />
+        <MiniMap 
+          nodeStrokeColor={(n) => {
+            if (n.id === selectedNodeId) return '#22c55e';
+            return '#6366f1';
+          }}
+          nodeColor={(n) => {
+            switch (n.type) {
+              case 'instgram':
+                return '#ec4899';
+              case 'trigger':
+                return '#f97316'; 
+              case 'gemini':
+                return '#06b6d4';
+              case 'helpDesk':
+                return '#22c55e';
+              case 'text':
+                return '#3b82f6';
+              default:
+                return '#64748b';
+            }
+          }}
+          maskColor="rgba(15, 23, 42, 0.5)"
+          className="bg-slate-800/80 border border-slate-700 rounded-lg shadow-lg"
+          style={{ right: 12, bottom: 12 }}
+        />
+        
+        {/* Top toolbar */}
+        <Panel position="top" className="w-full p-2 flex justify-center items-center">
+          <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg shadow-lg p-2 flex gap-2">
+            <Button
+              onClick={onQuickSave}
+              disabled={loading}
+              variant="primary"
+              icon={loading ? <LoaderCircle className="animate-spin" size={16} /> : <Save size={16} />}
+            >
+              {loading ? 'Saving...' : 'Quick Save'}
+            </Button>
+            <Button
+              onClick={openSaveModal}
+              disabled={loading}
+              variant="success"
+              icon={<SaveAs size={16} />}
+            >
+              Save As
+            </Button>
+            <Button
+              onClick={openLoadModal}
+              disabled={loading}
+              variant="warning"
+              icon={<List size={16} />}
+            >
+              Load
+            </Button>
+            <div className="h-6 w-px bg-slate-600 mx-1" />
+            <Button
+              onClick={onExport}
+              variant="secondary"
+              icon={<FileDown size={16} />}
+            >
+              Export
+            </Button>
+            <Button
+              onClick={onImportClick}
+              variant="tertiary"
+              icon={<FileUp size={16} />}
+            >
+              Import
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={onImport}
+              accept=".json"
+              className="hidden"
+            />
+          </div>
         </Panel>
       </ReactFlow>
 
@@ -579,25 +707,26 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
             type="text"
             value={flowName}
             onChange={(e) => setFlowName(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-400"
             placeholder="Enter a name for your flow"
             onKeyPress={(e) => e.key === 'Enter' && saveNamedFlow()}
           />
         </div>
         <div className="flex justify-end gap-2">
-          <button
+          <Button
             onClick={() => setIsSaveModalOpen(false)}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            variant="ghost"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={saveNamedFlow}
             disabled={loading || !flowName.trim()}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            variant="success"
+            icon={loading ? <LoaderCircle className="animate-spin" size={16} /> : <Save size={16} />}
           >
             {loading ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </Modal>
 
@@ -608,23 +737,27 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
         title="Load Flow"
       >
         {loading ? (
-          <div className="text-center text-gray-400">Loading...</div>
+          <div className="flex items-center justify-center py-6 text-slate-400">
+            <LoaderCircle className="animate-spin mr-2" size={20} />
+            <span>Loading...</span>
+          </div>
         ) : savedFlows.length === 0 ? (
-          <div className="text-gray-400 text-center py-4">No saved flows found</div>
+          <div className="text-slate-400 text-center py-6">No saved flows found</div>
         ) : (
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
             {savedFlows.map((name) => (
               <div 
                 key={name}
                 onClick={() => loadFlow(name)}
-                className="flex justify-between items-center p-3 hover:bg-gray-700 rounded cursor-pointer mb-2 transition-colors"
+                className="group flex justify-between items-center px-4 py-3 bg-slate-700/60 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors border border-slate-600 hover:border-slate-500"
               >
-                <span className="text-white">{name}</span>
+                <span className="text-white font-medium">{name}</span>
                 <button
                   onClick={(e) => deleteFlow(name, e)}
-                  className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
+                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 rounded-md hover:bg-red-900/30 transition-all"
+                  aria-label="Delete flow"
                 >
-                  Delete
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
