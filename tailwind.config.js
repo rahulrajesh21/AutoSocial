@@ -46,6 +46,18 @@ export default {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        blob: {
+          '0%': { transform: 'translate(0px, 0px) scale(1)' },
+          '33%': { transform: 'translate(30px, -30px) scale(1.1)' },
+          '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+          '100%': { transform: 'translate(0px, 0px) scale(1)' },
+        },
+        'ping-small': {
+          '75%, 100%': {
+            transform: 'scale(1.2)',
+            opacity: 0,
+          },
+        },
       },
       animation: {
         nodeEntrance: 'nodeEntrance 0.3s ease-out',
@@ -55,12 +67,22 @@ export default {
         slideInUp: 'slideInUp 0.3s ease-out',
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         shimmer: 'shimmer 2s infinite linear',
+        blob: 'blob 7s infinite ease-in-out',
+        'ping-small': 'ping-small 1s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
       backgroundSize: {
         'auto': 'auto',
         'cover': 'cover',
         'contain': 'contain',
         '200%': '200%',
+      },
+      transitionDelay: {
+        '2000': '2000ms',
+        '4000': '4000ms',
+      },
+      animationDelay: {
+        '2000': '2s',
+        '4000': '4s',
       },
     },
   },

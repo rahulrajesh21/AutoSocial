@@ -63,9 +63,14 @@ export async function getAllWorkflows(token) {
     },
   });
 
-  if (!res.ok) throw new Error('Failed to fetch workflows');
+  if (!res.ok) {
+    if (res.status === 404) {
+      return [];
+    }
+    throw new Error('Failed to fetch workflows');
+  }
+  
   const body  = await res.json();
-
   return body.data;
 }
 
