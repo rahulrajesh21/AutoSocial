@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AutoSocial | Redirecting...</title>
+  <script>
+    // Store the URL path in session storage
+    sessionStorage.redirect = location.href;
+    
+    // Then redirect to the index.html page
+    location.replace(location.origin);
+  </script>
+</head>
+<body>
+  <p>Redirecting to the application...</p>
+</body>
+</html> 
