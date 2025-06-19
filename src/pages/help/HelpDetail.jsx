@@ -513,7 +513,7 @@ const HelpDetail = () => {
             </div>
           </div>
           
-          {/* Sidebar */}
+          {/* Sidebar - stacked on mobile, side-by-side on desktop */}
           <div className="lg:col-span-1">
             <div className="bg-secondary border border-borderColor rounded-lg p-5">
               <h3 className="text-lg font-semibold mb-4">Related Articles</h3>

@@ -21,6 +21,9 @@ import {
   Inbox
 } from 'lucide-react';
 
+// Define API base URL for backend calls
+const API_BASE_URL = 'https://auto-social-backend.vercel.app';
+
 const Contacts = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +113,7 @@ const Contacts = () => {
     try {
       const token = await getToken();
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/helpdesk/tickets`,
+        `${API_BASE_URL}/api/helpdesk/tickets`,
         newTicket,
         {
           headers: {
@@ -207,7 +210,7 @@ const Contacts = () => {
     try {
       const token = await getToken();
       await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/helpdesk/tickets/${ticketId}`,
+        `${API_BASE_URL}/api/helpdesk/tickets/${ticketId}`,
         { status: newStatus },
         {
           headers: {
@@ -240,7 +243,7 @@ const Contacts = () => {
     try {
       const token = await getToken();
       await axios.delete(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/helpdesk/tickets/${ticketId}`,
+        `${API_BASE_URL}/api/helpdesk/tickets/${ticketId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -264,7 +267,7 @@ const Contacts = () => {
     try {
       const token = await getToken();
       await axios.put(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/helpdesk/tickets/${ticketId}`,
+        `${API_BASE_URL}/api/helpdesk/tickets/${ticketId}`,
         { status: 'resolved' },
         {
           headers: {
@@ -591,7 +594,7 @@ const Contacts = () => {
               try {
                 const token = await getToken();
                 const response = await axios.get(
-                  `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/helpdesk/tickets`, 
+                  `${API_BASE_URL}/api/helpdesk/tickets`, 
                   {
                     headers: {
                       Authorization: `Bearer ${token}`
