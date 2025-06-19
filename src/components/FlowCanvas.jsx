@@ -16,7 +16,7 @@ import GeminiNode from '../custom_nodes/geminiNode';
 import HelpDeskNode from '../custom_nodes/HelpDeskNode';
 import TriggerNode from '../custom_nodes/TriggerNode';
 import TextNode from '../custom_nodes/TextNode';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { updateTemplate, getWorkflowById } from '../utils/api';
 import { toast } from 'react-toastify';
@@ -28,7 +28,10 @@ import {
   LoaderCircle,
   Save as SaveAs,
   X,
-  Trash2
+  Trash2,
+  Laptop,
+  AlertTriangle,
+  ArrowLeft
 } from 'lucide-react';
 
 // Enhanced Modal Component
@@ -82,7 +85,47 @@ const Button = ({ onClick, disabled, variant = 'primary', icon, children, classN
   );
 };
 
+// Mobile device warning component
+const MobileWarning = () => {
+  const navigate = useNavigate();
+  
+  const handleGoBack = () => {
+    navigate('/'); // Go to home page instead of previous page
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 sm:p-6 z-50 overflow-auto">
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 sm:p-6 w-full max-w-sm sm:max-w-md text-center shadow-2xl animate-scaleIn mx-4">
+        <div className="flex items-center justify-center mb-4">
+          <div className="p-3 sm:p-4 bg-amber-900/30 rounded-full">
+            <AlertTriangle size={36} className="text-amber-500" />
+          </div>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Desktop Only Feature</h2>
+        <p className="text-slate-300 mb-5 sm:mb-6 text-sm sm:text-base">
+          The Workflow Designer is not optimized for mobile devices. Please use a laptop or desktop computer to access and edit workflows.
+        </p>
+        <div className="flex flex-col gap-4 items-center">
+          <div className="flex items-center gap-2 text-amber-400 bg-amber-950/40 px-3 py-2 rounded-lg text-sm w-full justify-center">
+            <Laptop size={18} />
+            <span className="font-medium">Use on desktop for best experience</span>
+          </div>
+          
+          <button 
+            onClick={handleGoBack}
+            className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white py-3 px-5 rounded-lg transition-colors w-full text-sm font-medium"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to Home</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
+  const [isMobile, setIsMobile] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -98,6 +141,18 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
   
   const { id } = useParams();
   const { getToken } = useAuth();
+
+  // Check for mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Node types
   const nodeTypes = {
@@ -564,6 +619,11 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
     reader.readAsText(file);
   };
 
+  // If on mobile, show warning instead of the flow canvas
+  if (isMobile) {
+    return <MobileWarning />;
+  }
+
   return (
     <div className="flex-1 h-full flex bg-slate-900 relative overflow-hidden" onDrop={onDrop} onDragOver={onDragOver}>
       <ReactFlow
@@ -742,6 +802,25 @@ const FlowCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
 };
 
 const WrappedCanvas = ({ onNodeSelect, onNodeUpdate, workflowData }) => {
+  // Check for mobile device at the wrapper level as well
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // If on mobile, show warning directly
+  if (isMobile) {
+    return <MobileWarning />;
+  }
+  
   return (
     <ReactFlowProvider>
       <FlowCanvas 
