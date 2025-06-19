@@ -87,7 +87,7 @@ const relatedTemplates = {
   'template-3': ['template-1'], // Lead Qualification -> Customer Support
   'template-4': ['template-2'], // Post Scheduler -> Content Generator
 };
-//fix
+
 const Home = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [name, setName] = useState('');

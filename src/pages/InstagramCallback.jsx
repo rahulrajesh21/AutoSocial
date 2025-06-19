@@ -3,9 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { exchangeCodeForToken, getLongLivedToken } from '../utils/instagram';
 import { useAuth } from '@clerk/clerk-react';
 
-// Add base URL constant
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://auto-social-backend.vercel.app';
-
 const InstagramCallback = () => {
   const [status, setStatus] = useState('Processing...');
   const [error, setError] = useState(null);
@@ -82,8 +79,8 @@ const InstagramCallback = () => {
     
     setStatus('Saving authentication data...');
     
-    // Save the Instagram token to your backend - update URL
-    const response = await fetch(`${API_BASE_URL}/api/instagram/save-token`, {
+    // Save the Instagram token to your backend
+    const response = await fetch('/api/instagram/save-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
