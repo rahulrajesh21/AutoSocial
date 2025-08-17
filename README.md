@@ -337,16 +337,6 @@ Contributions make the open-source community thrive! Here's how you can help:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📧 Contact
-
-**Rahul Rajesh Kumar**
-
-- 📧 Email: [rahulrajesh2101@gmail.com](mailto:rahulrajesh2101@gmail.com)
-- 🔗 LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/your-profile)
-- 💻 GitHub: [@rahulr2101](https://github.com/rahulr2101)
-- 🌐 Portfolio: [Your Portfolio Website](https://your-portfolio.com)
-
----
 
 <div align="center">
 
